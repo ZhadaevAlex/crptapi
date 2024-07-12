@@ -1,4 +1,4 @@
-package ru.zhadaev.test;
+package ru.zhadaev.testtasks.selsup;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
