@@ -24,12 +24,43 @@ public class CrptApi {
     RestTemplate restTemplate;
     private final int requestLimit;
 
-    public CrptApi(RestTemplate restTemplate, TimeUnit timeUnit, int requestLimit) {
+    /**
+     * Private constructor to prevent instantiation
+     * @param restTemplate
+     * @param timeUnit
+     * @param requestLimit
+     */
+    private CrptApi(RestTemplate restTemplate, TimeUnit timeUnit, int requestLimit) {
         this.requestLimit = requestLimit;
         this.headers.setContentType(MediaType.APPLICATION_JSON);
         this.restTemplate = restTemplate;
         Executors.newScheduledThreadPool(1)
                  .scheduleAtFixedRate(getLimitsRefresher(), 0L, 1, timeUnit);
+    }
+
+    /**
+     * Inner static helper class responsible for holding the Singleton instance
+     */
+    private static class SingletonHelper {
+        private static CrptApi INSTANCE;
+
+        private static void createInstance(RestTemplate restTemplate, TimeUnit timeUnit, int requestLimit) {
+            if (INSTANCE == null) {
+                INSTANCE = new CrptApi(restTemplate, timeUnit, requestLimit);
+            }
+        }
+    }
+
+    /**
+     * Method to provide global access to the Singleton instance
+     * @param restTemplate
+     * @param timeUnit
+     * @param requestLimit
+     * @return Instance of the CrptApi
+     */
+    public static CrptApi getInstance(RestTemplate restTemplate, TimeUnit timeUnit, int requestLimit) {
+        SingletonHelper.createInstance(restTemplate, timeUnit, requestLimit);
+        return SingletonHelper.INSTANCE;
     }
 
     /**
