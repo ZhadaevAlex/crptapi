@@ -7,7 +7,6 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
-import org.apache.http.ssl.TrustStrategy;
 import org.springframework.http.*;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
@@ -16,7 +15,6 @@ import javax.net.ssl.SSLContext;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -148,12 +146,7 @@ public class CrptApi {
          */
         private static RestTemplate createSecureRestTemplate() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
             SSLContext sslContext = SSLContexts.custom()
-                    .loadTrustMaterial(new TrustStrategy() {
-                        @Override
-                        public boolean isTrusted(X509Certificate[] chain, String authType) {
-                            return true; // Trust all certificates
-                        }
-                    }).build();
+                    .loadTrustMaterial((chain, authType) -> true).build();
 
             CloseableHttpClient httpClient = HttpClients.custom()
                     .setSSLContext(sslContext)
