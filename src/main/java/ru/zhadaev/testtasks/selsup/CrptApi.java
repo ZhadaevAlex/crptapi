@@ -3,8 +3,20 @@ package ru.zhadaev.testtasks.selsup;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.ssl.SSLContexts;
+import org.apache.http.ssl.TrustStrategy;
 import org.springframework.http.*;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
+
+import javax.net.ssl.SSLContext;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -26,16 +38,17 @@ public class CrptApi {
 
     /**
      * Private constructor to prevent instantiation
-     * @param restTemplate
-     * @param timeUnit
-     * @param requestLimit
+     *
+     * @param restTemplate - the RestTemplate instance
+     * @param timeUnit     - the time period in which the limit on the number of requests is set
+     * @param requestLimit - the maximum number of requests in this time period.
      */
     private CrptApi(RestTemplate restTemplate, TimeUnit timeUnit, int requestLimit) {
         this.requestLimit = requestLimit;
         this.headers.setContentType(MediaType.APPLICATION_JSON);
         this.restTemplate = restTemplate;
         Executors.newScheduledThreadPool(1)
-                 .scheduleAtFixedRate(getLimitsRefresher(), 0L, 1, timeUnit);
+                .scheduleAtFixedRate(getLimitsRefresher(), 0L, 1, timeUnit);
     }
 
     /**
@@ -53,9 +66,7 @@ public class CrptApi {
 
     /**
      * Method to provide global access to the Singleton instance
-     * @param restTemplate
-     * @param timeUnit
-     * @param requestLimit
+     *
      * @return Instance of the CrptApi
      */
     public static CrptApi getInstance(RestTemplate restTemplate, TimeUnit timeUnit, int requestLimit) {
@@ -112,6 +123,44 @@ public class CrptApi {
             String threadName = Thread.currentThread().getName();
             System.out.println("Thread " + threadName + " awaiting...");
             condition.await();
+        }
+    }
+
+    /**
+     * A utility class that configures and returns an instance of RestTempate
+     */
+    public class RestTemplateHttpsPostUtil {
+        private static RestTemplate restTemplateInstance;
+
+        private RestTemplateHttpsPostUtil() {
+        }
+
+        public static RestTemplate getRestTemplate() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+            if (restTemplateInstance == null) {
+                restTemplateInstance = createSecureRestTemplate();
+            }
+
+            return restTemplateInstance;
+        }
+
+        /**
+         * @return RestTemplate for HTTPS protocol operation
+         */
+        private static RestTemplate createSecureRestTemplate() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+            SSLContext sslContext = SSLContexts.custom()
+                    .loadTrustMaterial(new TrustStrategy() {
+                        @Override
+                        public boolean isTrusted(X509Certificate[] chain, String authType) {
+                            return true; // Trust all certificates
+                        }
+                    }).build();
+
+            CloseableHttpClient httpClient = HttpClients.custom()
+                    .setSSLContext(sslContext)
+                    .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                    .build();
+            HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
+            return new RestTemplate(factory);
         }
     }
 
